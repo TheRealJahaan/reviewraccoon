@@ -1,0 +1,17 @@
+# The raccoon reviews its own pull requests, using the code in the pull request itself.
+name: ReviewRaccoon
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./

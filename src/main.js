@@ -16,7 +16,11 @@ async function github(path, options = {}) {
       "Content-Type": "application/json",
     },
   });
-  if (!res.ok) throw new Error(`GitHub API ${res.status} on ${path}: ${await res.text()}`);
+  if (!res.ok) {
+    const err = new Error(`GitHub API ${res.status} on ${path}: ${await res.text()}`);
+    err.status = res.status;
+    throw err;
+  }
   return options.accept === "application/vnd.github.raw" ? res.text() : res.json();
 }
 
@@ -76,10 +80,18 @@ function buildComment(results) {
   ].join("\n\n");
 }
 
+// Find the comment we posted on an earlier run, if there is one.
+async function findOurComment(repo, prNumber) {
+  for (let page = 1; ; page++) {
+    const batch = await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100&page=${page}`);
+    const ours = batch.find((c) => c.body && c.body.includes(MARKER));
+    if (ours || batch.length < 100) return ours;
+  }
+}
+
 // Post the comment, or update our earlier one so each push doesn't add a new comment.
 async function postComment(repo, prNumber, body) {
-  const comments = await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
-  const ours = comments.find((c) => c.body && c.body.includes(MARKER));
+  const ours = await findOurComment(repo, prNumber);
   if (ours) {
     await github(`/repos/${repo}/issues/comments/${ours.id}`, { method: "PATCH", body: JSON.stringify({ body }) });
   } else {
@@ -102,7 +114,20 @@ async function main() {
   }
   const body = buildComment(results);
   console.log(body);
-  await postComment(repo, pr.number, body);
+
+  // Also show the report on the run's summary page.
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body + "\n");
+
+  try {
+    await postComment(repo, pr.number, body);
+  } catch (err) {
+    // Pull requests from forks get a read-only token, so GitHub won't let us comment.
+    if (err.status === 403) {
+      console.log("::warning::ReviewRaccoon can't comment on this pull request (GitHub gives pull requests from forks a read-only token). The report is on this run's summary page.");
+      return;
+    }
+    throw err;
+  }
 }
 
 main().catch((err) => {
