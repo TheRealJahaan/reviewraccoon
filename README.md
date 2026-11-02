@@ -13,7 +13,7 @@ ReviewRaccoon reads every changed JavaScript and TypeScript file and posts one c
 - **What's safe to skim:** files where only formatting, comments or local names changed.
 
 <p align="center">
-  <img src="docs/comment.png" width="640" alt="A ReviewRaccoon comment: only 2 of 11 changed lines need a careful look, with links to the login function and the Cart.total method">
+  <img src="docs/comment.png" width="640" alt="A ReviewRaccoon comment: only 2 of 12 changed lines need a careful look, and the login function on lines 9 to 13 is the one that changed">
 </p>
 
 It updates the same comment on every push, so it never spams the pull request.
