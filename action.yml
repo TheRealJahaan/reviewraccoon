@@ -1,0 +1,17 @@
+name: "ReviewRaccoon"
+description: "Tells reviewers which files in a pull request are refactor-only and which change behavior."
+author: "TheRealJahaan"
+branding:
+  icon: "search"
+  color: "orange"
+runs:
+  using: "composite"
+  steps:
+    - name: Install ReviewRaccoon
+      shell: bash
+      run: npm ci --omit=dev --prefix "${{ github.action_path }}"
+    - name: Sort the pull request
+      shell: bash
+      run: node "${{ github.action_path }}/src/main.js"
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
