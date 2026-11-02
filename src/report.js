@@ -14,16 +14,24 @@ function blobLink(ctx, sha, path, [start, end]) {
   return `${ctx.server}/${ctx.repo}/blob/${sha}/${encodeURI(path)}#${anchor}`;
 }
 
+// "`a`", "`a` and `b`", "`a`, `b` and `c`"
+function nameList(names) {
+  const quoted = names.map((n) => `\`${n}\``);
+  return quoted.length > 1 ? `${quoted.slice(0, -1).join(", ")} and ${quoted[quoted.length - 1]}` : quoted[0];
+}
+
 function describeChange(change, file, ctx) {
-  const name = change.name ? `\`${change.name}\`` : "Top-level code";
+  const names = change.names && change.names.length ? change.names : change.name ? [change.name] : [];
+  const many = names.length > 1;
+  const subject = names.length ? nameList(names) : change.count > 1 ? "Top-level code" : change.label || "Top-level code";
   const at = (lines, sha, suffix = "") => `[${linesLabel(lines)}${suffix}](${blobLink(ctx, sha, file, lines)})`;
   switch (change.kind) {
     case "changed":
-      return `${name} changed · ${at(change.newLines, ctx.headSha)}`;
+      return `${subject} changed · ${at(change.newLines, ctx.headSha)}`;
     case "added":
-      return `${name} is new · ${at(change.newLines, ctx.headSha)}`;
+      return `${subject} ${many ? "are" : "is"} new · ${at(change.newLines, ctx.headSha)}`;
     case "removed":
-      return `${name} was removed · ${at(change.oldLines, ctx.oldSha, " before")}`;
+      return `${subject} ${many ? "were" : "was"} removed · ${at(change.oldLines, ctx.oldSha, " before")}`;
     case "reordered":
       return `${change.name ? `The order inside \`${change.name}\`` : "The order of the code"} changed · ${at(change.newLines, ctx.headSha)}`;
     default:

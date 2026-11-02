@@ -18,7 +18,7 @@ function nameOf(node) {
     case "TSModuleDeclaration":
       return node.id && node.id.name ? node.id.name : null;
     case "VariableDeclaration": {
-      const names = node.declarations.map((d) => (d.id.type === "Identifier" ? d.id.name : null)).filter(Boolean);
+      const names = node.declarations.flatMap((d) => patternNames(d.id));
       return names.length ? names.join(", ") : null;
     }
     case "ImportDeclaration":
@@ -53,11 +53,55 @@ function nameOf(node) {
 function memberName(node) {
   if (!node) return null;
   if (node.type === "Identifier") return node.name;
+  if (node.type === "ThisExpression") return "this";
+  if (node.type === "CallExpression") {
+    const callee = memberName(node.callee);
+    return callee ? `${callee}(…)` : null;
+  }
   if (node.type === "MemberExpression" && !node.computed && node.property.type === "Identifier") {
     const object = memberName(node.object);
     return object ? `${object}.${node.property.name}` : null;
   }
   return null;
+}
+
+// The names a declaration creates: "a" in "const a", "a, b" in "const { a, b }".
+function patternNames(node) {
+  if (!node) return [];
+  switch (node.type) {
+    case "Identifier":
+      return [node.name];
+    case "ObjectPattern":
+      return node.properties.flatMap((p) => patternNames(p.type === "RestElement" ? p.argument : p.value));
+    case "ArrayPattern":
+      return node.elements.flatMap((e) => patternNames(e));
+    case "AssignmentPattern":
+      return patternNames(node.left);
+    case "RestElement":
+      return patternNames(node.argument);
+    default:
+      return [];
+  }
+}
+
+// A plain description for pieces that have no name, like a loop at the top of a file.
+function labelOf(node) {
+  switch (node.type) {
+    case "ForStatement":
+    case "ForOfStatement":
+    case "ForInStatement":
+    case "WhileStatement":
+    case "DoWhileStatement":
+      return "A top-level loop";
+    case "IfStatement":
+      return "A top-level if block";
+    case "TryStatement":
+      return "A top-level try block";
+    case "ExportNamedDeclaration":
+      return "The export list";
+    default:
+      return "Top-level code";
+  }
 }
 
 // The class inside a top-level piece, if it is one, so we can look at its methods.
@@ -81,6 +125,7 @@ function describe(nodes, owner, isTopLevel, prefix) {
       node,
       index,
       name: name ? prefix + name : null,
+      label: labelOf(node),
       fp: pieceFingerprint(node, owner, isTopLevel),
       start: node.loc.start.line,
       end: node.loc.end.line,
@@ -125,6 +170,8 @@ function toChange(pair) {
   return {
     kind: pair.kind,
     name: piece.name,
+    names: piece.name ? [piece.name] : [],
+    label: piece.label,
     oldLines: pair.old ? [pair.old.start, pair.old.end] : null,
     newLines: pair.new ? [pair.new.start, pair.new.end] : null,
   };
@@ -149,6 +196,8 @@ function compareLevel(oldNodes, newNodes, ctx, prefix) {
     changes.push(toChange(pair));
   }
 
+  groupNeighbors(changes);
+
   // Nothing changed piece by piece, but the file is different: the order changed.
   const order = pairs.filter((p) => p.kind === "same").map((p) => p.old.index);
   const reordered = order.some((value, i) => i > 0 && value < order[i - 1]);
@@ -161,6 +210,25 @@ function compareLevel(oldNodes, newNodes, ctx, prefix) {
     });
   }
   return changes;
+}
+
+// Merge changes of the same kind that sit next to each other, so three new imports
+// in a row show up as one line in the comment instead of three.
+function groupNeighbors(changes) {
+  const range = (c) => (c.kind === "removed" ? c.oldLines : c.newLines);
+  for (let i = changes.length - 1; i > 0; i--) {
+    const prev = changes[i - 1];
+    const next = changes[i];
+    const sameShape = prev.kind === next.kind && Boolean(prev.name) === Boolean(next.name) && prev.label === next.label;
+    if (!sameShape || !range(prev) || !range(next) || range(next)[0] - range(prev)[1] > 2) continue;
+    const join = (a, b) => (a && b ? [Math.min(a[0], b[0]), Math.max(a[1], b[1])] : a || b);
+    prev.names = [...prev.names, ...next.names];
+    prev.name = prev.names.length ? prev.names.join(", ") : null;
+    prev.oldLines = join(prev.oldLines, next.oldLines);
+    prev.newLines = join(prev.newLines, next.newLines);
+    prev.count = (prev.count || 1) + (next.count || 1);
+    changes.splice(i, 1);
+  }
 }
 
 function topLevelChecker(ast, owner) {

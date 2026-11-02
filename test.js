@@ -103,6 +103,8 @@ const pieceCases = [
   ["reads a different top-level variable", "const x = 1;\nconst y = 2;\nfunction f(){ return x }", "const x = 1;\nconst y = 2;\nfunction f(){ return y }", ["changed f 3"]],
   ["module.exports changed", "const a=1, b=2;\nmodule.exports = { a };", "const a=1, b=2;\nmodule.exports = { a, b };", ["changed module.exports 2"]],
   ["side effects run in a new order", "setup();\nstart();", "start();\nsetup();", ["reordered - 1-2"]],
+  ["three new imports in a row show up once", "const a = 1;", "const { x } = require(\"x\");\nconst { y, z } = require(\"y\");\nconst w = require(\"w\");\nconst a = 1;", ["added x, y, z, w 1-3"]],
+  ["a removed loop", "for (const i of list) use(i);\nconst a = 1;", "const a = 1;", ["removed - 1"]],
   ["\"use strict\" added", "function a(){ return 1 }", "\"use strict\";\nfunction a(){ return 1 }", ["file - 1-2"]],
 ];
 
