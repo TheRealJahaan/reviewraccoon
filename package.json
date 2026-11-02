@@ -1,23 +1,32 @@
 {
   "name": "reviewraccoon",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Tells reviewers which files in a pull request are refactor-only and which change behavior.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TheRealJahaan/reviewraccoon.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "github-action",
+    "code-review",
+    "pull-request",
+    "refactor",
+    "ast",
+    "javascript",
+    "typescript"
+  ],
+  "author": "Jahaan Suthar",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/TheRealJahaan/reviewraccoon/issues"
   },
   "homepage": "https://github.com/TheRealJahaan/reviewraccoon#readme",
   "dependencies": {
-    "@babel/parser": "^7.29.12"
-  }
+    "@babel/parser": "^7.29.12",
+    "@babel/traverse": "^7.29.12"
+  },
+  "private": true
 }
