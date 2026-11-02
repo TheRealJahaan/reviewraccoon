@@ -1,9 +1,10 @@
 {
   "name": "reviewraccoon",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Tells reviewers which files in a pull request are refactor-only and which change behavior.",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "scan": "node scripts/scan.js"
   },
   "repository": {
     "type": "git",

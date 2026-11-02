@@ -58,13 +58,14 @@ function isFixedName(node, key) {
 }
 
 // Step 2: rebuild the tree with local names swapped for v1, v2, v3... in order of appearance.
-function normalize(node, owner, names) {
+// keepName(binding) can say "leave this one as written" (used when comparing single functions).
+function normalize(node, owner, names, keepName) {
   if (!node || typeof node !== "object") return node;
-  if (Array.isArray(node)) return node.map((child) => normalize(child, owner, names));
+  if (Array.isArray(node)) return node.map((child) => normalize(child, owner, names, keepName));
 
   // "if (x) return;" and "if (x) { return; }" do the same thing, so drop the extra braces.
   if (node.type === "BlockStatement" && node.body.length === 1 && node.body[0].type !== "VariableDeclaration") {
-    return normalize(node.body[0], owner, names);
+    return normalize(node.body[0], owner, names, keepName);
   }
 
   const out = {};
@@ -73,6 +74,10 @@ function normalize(node, owner, names) {
     // A local name: swap it for its placeholder, but keep its type annotation and the rest.
     if (key === "name" && owner.has(node)) {
       const binding = owner.get(node);
+      if (keepName && keepName(binding)) {
+        out.name = node.name;
+        continue;
+      }
       if (!names.has(binding)) names.set(binding, "v" + (names.size + 1));
       out.name = names.get(binding);
       continue;
@@ -81,7 +86,7 @@ function normalize(node, owner, names) {
     if (child && child.type === "Identifier" && isFixedName(node, key)) {
       out[key] = { type: "Identifier", name: child.name };
     } else {
-      out[key] = normalize(child, owner, names);
+      out[key] = normalize(child, owner, names, keepName);
     }
   }
   return out;
@@ -97,4 +102,4 @@ function isRefactorOnly(oldCode, newCode) {
   return fingerprint(oldCode) === fingerprint(newCode);
 }
 
-module.exports = { fingerprint, isRefactorOnly };
+module.exports = { fingerprint, isRefactorOnly, toTree, findLocalNames, normalize };
