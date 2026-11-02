@@ -170,7 +170,7 @@ function toChange(pair) {
   return {
     kind: pair.kind,
     name: piece.name,
-    names: piece.name ? [piece.name] : [],
+    names: piece.name ? piece.name.split(", ") : [],
     label: piece.label,
     oldLines: pair.old ? [pair.old.start, pair.old.end] : null,
     newLines: pair.new ? [pair.new.start, pair.new.end] : null,
@@ -212,14 +212,15 @@ function compareLevel(oldNodes, newNodes, ctx, prefix) {
   return changes;
 }
 
-// Merge changes of the same kind that sit next to each other, so three new imports
-// in a row show up as one line in the comment instead of three.
+// Merge new or removed pieces that sit next to each other, so three new imports in a
+// row show up as one line in the comment. Changed pieces stay separate, with their own lines.
 function groupNeighbors(changes) {
   const range = (c) => (c.kind === "removed" ? c.oldLines : c.newLines);
   for (let i = changes.length - 1; i > 0; i--) {
     const prev = changes[i - 1];
     const next = changes[i];
-    const sameShape = prev.kind === next.kind && Boolean(prev.name) === Boolean(next.name) && prev.label === next.label;
+    const groupable = prev.kind === "added" || prev.kind === "removed";
+    const sameShape = groupable && prev.kind === next.kind && Boolean(prev.name) === Boolean(next.name) && prev.label === next.label;
     if (!sameShape || !range(prev) || !range(next) || range(next)[0] - range(prev)[1] > 2) continue;
     const join = (a, b) => (a && b ? [Math.min(a[0], b[0]), Math.max(a[1], b[1])] : a || b);
     prev.names = [...prev.names, ...next.names];

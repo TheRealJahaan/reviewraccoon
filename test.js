@@ -104,6 +104,7 @@ const pieceCases = [
   ["module.exports changed", "const a=1, b=2;\nmodule.exports = { a };", "const a=1, b=2;\nmodule.exports = { a, b };", ["changed module.exports 2"]],
   ["side effects run in a new order", "setup();\nstart();", "start();\nsetup();", ["reordered - 1-2"]],
   ["three new imports in a row show up once", "const a = 1;", "const { x } = require(\"x\");\nconst { y, z } = require(\"y\");\nconst w = require(\"w\");\nconst a = 1;", ["added x, y, z, w 1-3"]],
+  ["two changed functions next to each other stay separate", "function a(){ return 1 }\nfunction b(){ return 2 }", "function a(){ return 3 }\nfunction b(){ return 4 }", ["changed a 1", "changed b 2"]],
   ["a removed loop", "for (const i of list) use(i);\nconst a = 1;", "const a = 1;", ["removed - 1"]],
   ["\"use strict\" added", "function a(){ return 1 }", "\"use strict\";\nfunction a(){ return 1 }", ["file - 1-2"]],
 ];
