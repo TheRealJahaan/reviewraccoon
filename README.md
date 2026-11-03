@@ -1,22 +1,45 @@
 # 🦝 ReviewRaccoon
 
 [![Tests](https://github.com/TheRealJahaan/reviewraccoon/actions/workflows/test.yml/badge.svg)](https://github.com/TheRealJahaan/reviewraccoon/actions/workflows/test.yml)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-ReviewRaccoon-orange?logo=github)](https://github.com/marketplace/actions/reviewraccoon)
 
-**Most of a pull request is noise. ReviewRaccoon proves which part.**
+**See exactly which functions a pull request changes. Prove the rest is safe.**
 
-A 400-line pull request often has only 14 lines that change what the code does. The rest is renames, reformatting and moved code, but a reviewer can't tell which is which without reading everything.
+ReviewRaccoon reads every changed JavaScript and TypeScript file in a pull request and posts one comment that says:
 
-ReviewRaccoon reads every changed JavaScript and TypeScript file and posts one comment that says:
-
-- **How much really changed:** "Only 14 of 412 changed lines need a careful look."
-- **Exactly where:** the functions, classes and methods that behave differently, with links to their lines.
-- **What's safe to skim:** files where only formatting, comments or local names changed.
+- **Where behavior changed:** the functions, classes and methods that now do something different, with links to their lines.
+- **How much that is:** "Only 2 of 12 changed lines need a careful look."
+- **What's provably safe:** files where only formatting, comments or local names changed.
 
 <p align="center">
   <img src="docs/comment.png" width="640" alt="A ReviewRaccoon comment: only 2 of 12 changed lines need a careful look, and the login function on lines 9 to 13 is the one that changed">
 </p>
 
 It updates the same comment on every push, so it never spams the pull request.
+
+## What 1,000 real pull requests showed
+
+I built ReviewRaccoon because I thought most of a pull request was noise: renames, reformatting and moved code. Then I measured it. The [scanner](#measure-your-own-repo) ran ReviewRaccoon over the last 100 merged pull requests of 10 big open-source projects in November 2026.
+
+| Repo | Changed lines of JS and TS | Refactor-only |
+| --- | ---: | ---: |
+| facebook/react | 15,515 | 2% |
+| vercel/next.js | 25,379 | 4% |
+| microsoft/vscode | 39,080 | 1% |
+| microsoft/TypeScript | 24,203 | 1% |
+| vitejs/vite | 10,903 | 2% |
+| sveltejs/svelte | 14,182 | 6% |
+| angular/angular | 8,713 | 5% |
+| prettier/prettier | 4,133 | 5% |
+| eslint/eslint | 8,601 | 5% |
+| nodejs/node | 19,451 | 3% |
+| **All 10** | **170,160** | **3%** |
+
+I was wrong. In these projects, 97% of changed lines change what the code does. Refactors ship as their own pull requests: only 11 of the 666 pull requests that touched JavaScript or TypeScript were pure refactors, and the biggest was 11 lines.
+
+The count is strict. Inside a function that changed, every changed line counts as a change, even a rename on the next line, so the real refactor share is somewhat higher. Pull requests with more than 100 code files were skipped (8 of the 1,000).
+
+So ReviewRaccoon doesn't promise to hide most of your diff. It points you at the exact functions that behave differently, and when a change really is refactor-only, it proves it, so you can approve it in seconds.
 
 ## Not a guess. A proof.
 
@@ -66,9 +89,9 @@ jobs:
 
 Then open a pull request that changes a `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs` or `.cjs` file. The raccoon comments within about 20 seconds.
 
-## How noisy are your pull requests?
+## Measure your own repo
 
-The scanner runs ReviewRaccoon over the recent merged pull requests of any public repo and tells you how many changed lines actually changed behavior.
+The scanner runs ReviewRaccoon over the recent merged pull requests of any public repo and tells you how many changed lines actually changed behavior. It's how the table above was made.
 
 ```bash
 git clone https://github.com/TheRealJahaan/reviewraccoon
@@ -77,7 +100,7 @@ npm install
 GITHUB_TOKEN=$(gh auth token) node scripts/scan.js facebook/react vercel/next.js --prs 100
 ```
 
-It prints a summary for each repo and saves every pull request's numbers to `scan-results.json`.
+It prints a summary for each repo and saves every pull request's numbers to `scan-results.json`. If your numbers look very different from the table, [open an issue](https://github.com/TheRealJahaan/reviewraccoon/issues) and share them.
 
 ## Limitations
 
@@ -96,6 +119,7 @@ npm test
 
 ## Roadmap
 
+- Flag the exact statements that changed inside a function, not the whole function
 - Python, Go and Java support
 - Detect code moved between files
 - Optional AI review of only the lines that changed behavior, with your own API key
